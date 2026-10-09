@@ -117,6 +117,7 @@ class CommunicationService:
                     tamil_message=tam_msg,
                     english_message=eng_msg,
                     priority_score=followup.priority_score,
+                    followup_id=followup.id,
                 )
                 logger.info(f"[Communication -> Email] Clinical reminder sent to {recipient_email}: {email_result.get('status')}")
             except Exception as e:

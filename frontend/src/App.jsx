@@ -13,12 +13,17 @@ import PatientsPage from './pages/PatientsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import SimulatorPage from './pages/SimulatorPage';
 import UsersManagementPage from './pages/UsersManagementPage';
+import PatientVoiceCallPage from './pages/PatientVoiceCallPage';
 
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          {/* Public Patient Tele-Triage In-App Call Route */}
+          <Route path="/call/:id" element={<PatientVoiceCallPage />} />
+          <Route path="/call" element={<PatientVoiceCallPage />} />
+
           {/* Public Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />

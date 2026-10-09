@@ -15,6 +15,7 @@ import {
   EyeOff,
   PhoneCall,
   Mail,
+  ExternalLink,
 } from 'lucide-react';
 import { followupsApi, patientsApi } from '../api/client';
 import VoiceCallModal from '../components/VoiceCallModal';
@@ -327,13 +328,25 @@ export default function QueuePage() {
 
                     {/* Coordinator Quick Action Buttons */}
                     <div className="flex items-center gap-2 w-full justify-end flex-wrap">
-                      {/* AI Voice Call Assistant Button */}
+                      {/* In-App Direct Patient Call Button */}
+                      <a
+                        href={`/call/${f.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                        title="Open Direct Patient In-App Voice Call Screen"
+                      >
+                        <PhoneCall className="w-3.5 h-3.5 text-emerald-400" />
+                        In-App Call
+                      </a>
+
+                      {/* AI Voice Call Modal Assistant Button */}
                       <button
                         onClick={() => setActiveVoiceCall({ followup: f, patient: patient })}
                         className="px-2.5 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
                         title="Start AI Clinical Voice Call in Tamil or English"
                       >
-                        <PhoneCall className="w-3.5 h-3.5 text-indigo-400" />
+                        <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
                         AI Call
                       </button>
 

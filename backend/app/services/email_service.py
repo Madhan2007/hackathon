@@ -19,6 +19,7 @@ class EmailService:
         tamil_message: str,
         english_message: str,
         priority_score: int,
+        followup_id: str = "demo",
     ) -> str:
         """Generates an enterprise-grade responsive HTML clinical reminder email."""
         return f"""<!DOCTYPE html>
@@ -74,9 +75,16 @@ class EmailService:
         <p class="card-content" style="color: #e0e7ff;">{tamil_message}</p>
       </div>
 
-      <!-- Action Button -->
-      <div style="text-align: center; margin: 24px 0 10px 0;">
-        <a href="http://51.21.243.60/" class="btn">View Clinic Dashboard & Protocol</a>
+      <!-- Action Buttons -->
+      <div style="text-align: center; margin: 26px 0 16px 0;">
+        <a href="http://51.21.243.60/call/{followup_id}" class="btn" style="background: linear-gradient(135deg, #059669 0%, #0d9488 100%); font-size: 15px; padding: 14px 28px; box-shadow: 0 4px 14px rgba(13, 148, 136, 0.4);">
+          📞 Answer AI Clinical Voice Call
+        </a>
+        <div style="margin-top: 10px;">
+          <a href="http://51.21.243.60/" style="color: #2dd4bf; text-decoration: underline; font-size: 12px;">
+            Open Clinic Dashboard & Chart
+          </a>
+        </div>
       </div>
 
       <!-- Emergency Warning -->
@@ -102,6 +110,7 @@ class EmailService:
         tamil_message: str,
         english_message: str,
         priority_score: int = 90,
+        followup_id: str = "demo",
     ) -> Dict[str, Any]:
         """
         Sends rich HTML clinical reminder email via SMTP.
@@ -116,6 +125,7 @@ class EmailService:
             tamil_message=tamil_message,
             english_message=english_message,
             priority_score=priority_score,
+            followup_id=followup_id,
         )
 
         subject = f"🌸 FertiFlow AI Reminder: {patient_name} - {stage.replace('_', ' ').title()} Protocol"
