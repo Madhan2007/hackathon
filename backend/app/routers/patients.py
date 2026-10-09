@@ -26,6 +26,7 @@ def create_patient(payload: PatientCreate, db: Session = Depends(get_db)):
         id=str(uuid.uuid4()),
         name=payload.name,
         phone=payload.phone,
+        email=payload.email,
         language=payload.language,
         district=payload.district,
         privacy_mode=payload.privacy_mode,

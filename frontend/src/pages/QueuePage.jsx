@@ -14,6 +14,7 @@ import {
   Eye,
   EyeOff,
   PhoneCall,
+  Mail,
 } from 'lucide-react';
 import { followupsApi, patientsApi } from '../api/client';
 import VoiceCallModal from '../components/VoiceCallModal';
@@ -246,6 +247,12 @@ export default function QueuePage() {
                             {isRevealed ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                           </button>
                         )}
+                      </span>
+
+                      {/* Patient Registered Email */}
+                      <span className="flex items-center gap-1.5 text-xs font-mono text-teal-300 bg-teal-950/40 px-2.5 py-1 rounded-md border border-teal-800/40">
+                        <Mail className="w-3 h-3 text-teal-400" />
+                        {patient.email ? patient.email : <span className="text-slate-500">No email</span>}
                       </span>
 
                       {/* District Badge */}

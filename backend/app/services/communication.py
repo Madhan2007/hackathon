@@ -99,10 +99,10 @@ class CommunicationService:
             except Exception as e:
                 logger.error(f"[Communication -> Twilio] Dispatch error: {e}")
 
-        # 3. Clinical Email Reminder Dispatch
+        # 3. Clinical Email Reminder Dispatch (Sent specifically to this patient's registered email)
         email_result = None
-        recipient_email = getattr(patient, "email", None) or settings.SMTP_USER
-        if recipient_email:
+        recipient_email = getattr(patient, "email", None)
+        if recipient_email and str(recipient_email).strip():
             try:
                 from app.services.email_service import EmailService
                 stage = followup.cycle.stage if (followup.cycle and followup.cycle.stage) else "clinical_care"
