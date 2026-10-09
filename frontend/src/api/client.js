@@ -60,6 +60,7 @@ export const followupsApi = {
   list: (params) => apiClient.get('/followups/', { params }).then((res) => res.data),
   create: (data) => apiClient.post('/followups/', data).then((res) => res.data),
   update: (id, data) => apiClient.patch(`/followups/${id}`, data).then((res) => res.data),
+  triggerCall: (id) => apiClient.post(`/followups/${id}/call`).then((res) => res.data),
 };
 
 export const systemApi = {

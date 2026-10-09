@@ -122,3 +122,42 @@ def update_followup(id: str, payload: FollowupUpdate, db: Session = Depends(get_
     db.commit()
     db.refresh(followup)
     return followup
+
+
+@router.post("/{id}/call")
+def trigger_voice_call(id: str, db: Session = Depends(get_db)):
+    """Trigger real automated cellular phone call to patient's SIM card via Exotel / n8n."""
+    followup = db.query(Followup).filter(Followup.id == id).first()
+    if not followup:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Follow-up with ID '{id}' not found."
+        )
+
+    patient = followup.patient
+    if not patient or not patient.phone:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Patient does not have a valid mobile phone number."
+        )
+
+    from app.services.exotel_service import ExotelVoiceService
+    stage = followup.cycle.stage if followup.cycle else "IVF Care"
+    tam_msg = followup.ai_metadata.get("tam_message", "உங்கள் IVF மருத்துவ நினைவூட்டல்.") if followup.ai_metadata else "உங்கள் IVF மருந்தை தவறாமல் எடுத்துக்கொள்ளவும்."
+    eng_msg = followup.ai_metadata.get("eng_message", "Your clinical medication reminder.") if followup.ai_metadata else "Please take your scheduled medication."
+
+    call_result = ExotelVoiceService.initiate_patient_call(
+        patient_phone=patient.phone,
+        patient_name=patient.name,
+        tamil_message=tam_msg,
+        english_message=eng_msg,
+        followup_id=followup.id,
+        stage=stage,
+    )
+
+    return {
+        "status": "success",
+        "patient": patient.name,
+        "phone": patient.phone,
+        "result": call_result,
+    }

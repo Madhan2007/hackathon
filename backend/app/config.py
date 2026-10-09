@@ -64,6 +64,18 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = Field(default="", description="SMTP password or Gmail App Password")
     SMTP_FROM_EMAIL: str = Field(default="FertiFlow AI <noreply@fertiflow.ai>", description="Outgoing from address")
 
+    # Exotel Indian Telephony Settings (Calls Indian Mobile Numbers directly)
+    EXOTEL_ACCOUNT_SID: str = Field(default="", description="Exotel Account SID")
+    EXOTEL_API_KEY: str = Field(default="", description="Exotel API Key")
+    EXOTEL_API_TOKEN: str = Field(default="", description="Exotel API Token")
+    EXOTEL_CALLER_ID: str = Field(default="", description="Exotel Virtual Number (e.g. 080471... or 044...)")
+
+    # n8n Voice Call Trigger Webhook
+    N8N_VOICE_CALL_WEBHOOK_URL: str = Field(
+        default="http://n8n:5678/webhook/fertiflow-voice-call",
+        description="n8n webhook URL for automated voice call trigger"
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

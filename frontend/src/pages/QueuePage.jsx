@@ -27,6 +27,20 @@ export default function QueuePage() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [revealedPhones, setRevealedPhones] = useState({});
   const [activeVoiceCall, setActiveVoiceCall] = useState(null);
+  const [callingId, setCallingId] = useState(null);
+
+  const handleTriggerPhoneCall = async (f, patient) => {
+    setCallingId(f.id);
+    try {
+      const res = await followupsApi.triggerCall(f.id);
+      const msg = res.result?.message || `Dialing patient ${patient.name} (${patient.phone}) via Exotel Indian Healthcare Telephony Gateway!`;
+      alert(`📞 Call Request Dispatched:\n\n${msg}`);
+    } catch (err) {
+      alert(`Call failed: ${err.response?.data?.detail || err.message}`);
+    } finally {
+      setCallingId(null);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -328,6 +342,17 @@ export default function QueuePage() {
 
                     {/* Coordinator Quick Action Buttons */}
                     <div className="flex items-center gap-2 w-full justify-end flex-wrap">
+                      {/* Exotel Real SIM Phone Call Button */}
+                      <button
+                        onClick={() => handleTriggerPhoneCall(f, patient)}
+                        disabled={callingId === f.id}
+                        className="px-2.5 py-1.5 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/40 text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                        title="Dial patient's physical phone number via Exotel Indian Healthcare Telephony"
+                      >
+                        <PhoneCall className={`w-3.5 h-3.5 text-teal-400 ${callingId === f.id ? 'animate-bounce' : ''}`} />
+                        {callingId === f.id ? 'Dialing...' : 'Call SIM'}
+                      </button>
+
                       {/* In-App Direct Patient Call Button */}
                       <a
                         href={`/call/${f.id}`}
@@ -336,7 +361,7 @@ export default function QueuePage() {
                         className="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
                         title="Open Direct Patient In-App Voice Call Screen"
                       >
-                        <PhoneCall className="w-3.5 h-3.5 text-emerald-400" />
+                        <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
                         In-App Call
                       </a>
 
