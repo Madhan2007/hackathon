@@ -348,7 +348,6 @@ export default function PatientsPage() {
                     ))}
                   </select>
                 </div>
-              </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
