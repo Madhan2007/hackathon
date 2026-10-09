@@ -56,6 +56,14 @@ class Settings(BaseSettings):
         description="Twilio WhatsApp sender (default is Twilio Sandbox: whatsapp:+14155238886)"
     )
 
+    # Email SMTP Notification Settings (e.g. Gmail App Password, Brevo, AWS SES)
+    SMTP_ENABLED: bool = Field(default=True, description="Enable email reminder dispatches")
+    SMTP_HOST: str = Field(default="smtp.gmail.com", description="SMTP host server")
+    SMTP_PORT: int = Field(default=587, description="SMTP port (587 for TLS, 465 for SSL)")
+    SMTP_USER: str = Field(default="", description="SMTP account username / email")
+    SMTP_PASSWORD: str = Field(default="", description="SMTP password or Gmail App Password")
+    SMTP_FROM_EMAIL: str = Field(default="FertiFlow AI <noreply@fertiflow.ai>", description="Outgoing from address")
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -11,6 +11,7 @@ class Patient(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(255), nullable=False)
     phone = Column(String(32), unique=True, nullable=False, index=True)
+    email = Column(String(255), nullable=True, default=None)
     language = Column(String(10), nullable=False, default="ta")  # "ta" (Tamil) or "en" (English)
     district = Column(String(100), nullable=False, default="Chennai")
     privacy_mode = Column(Boolean, nullable=False, default=False)

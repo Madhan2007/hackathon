@@ -6,6 +6,7 @@ from datetime import datetime
 class PatientBase(BaseModel):
     name: str = Field(..., min_length=2, max_length=255, description="Full patient or couple name")
     phone: str = Field(..., min_length=8, max_length=32, description="E.164 or 10-digit phone number")
+    email: Optional[str] = Field(None, description="Patient contact email for medication reminders and clinical reports")
     language: str = Field(default="ta", description="Preferred language code: 'ta' (Tamil) or 'en' (English)")
     district: str = Field(default="Chennai", description="District in Tamil Nadu")
     privacy_mode: bool = Field(default=False, description="Discreet masking mode for sensitive notifications")
@@ -19,6 +20,7 @@ class PatientCreate(PatientBase):
 class PatientUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=2, max_length=255)
     phone: Optional[str] = Field(None, min_length=8, max_length=32)
+    email: Optional[str] = None
     language: Optional[str] = None
     district: Optional[str] = None
     privacy_mode: Optional[bool] = None

@@ -13,8 +13,10 @@ import {
   RefreshCw,
   Eye,
   EyeOff,
+  PhoneCall,
 } from 'lucide-react';
 import { followupsApi, patientsApi } from '../api/client';
+import VoiceCallModal from '../components/VoiceCallModal';
 
 export default function QueuePage() {
   const [followups, setFollowups] = useState([]);
@@ -22,6 +24,7 @@ export default function QueuePage() {
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
   const [revealedPhones, setRevealedPhones] = useState({});
+  const [activeVoiceCall, setActiveVoiceCall] = useState(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -316,7 +319,17 @@ export default function QueuePage() {
                     </div>
 
                     {/* Coordinator Quick Action Buttons */}
-                    <div className="flex items-center gap-2 w-full justify-end">
+                    <div className="flex items-center gap-2 w-full justify-end flex-wrap">
+                      {/* AI Voice Call Assistant Button */}
+                      <button
+                        onClick={() => setActiveVoiceCall({ followup: f, patient: patient })}
+                        className="px-2.5 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                        title="Start AI Clinical Voice Call in Tamil or English"
+                      >
+                        <PhoneCall className="w-3.5 h-3.5 text-indigo-400" />
+                        AI Call
+                      </button>
+
                       {f.status !== 'sent' && f.status !== 'completed' && (
                         <button
                           onClick={() => handleUpdateStatus(f.id, 'sent')}
@@ -343,6 +356,20 @@ export default function QueuePage() {
             );
           })}
         </div>
+      )}
+
+      {/* Interactive AI Clinical Voice Call Modal */}
+      {activeVoiceCall && (
+        <VoiceCallModal
+          followup={activeVoiceCall.followup}
+          patient={activeVoiceCall.patient}
+          onClose={() => setActiveVoiceCall(null)}
+          onCallCompleted={(id, newStatus) => {
+            setFollowups((prev) =>
+              prev.map((f) => (f.id === id ? { ...f, status: newStatus } : f))
+            );
+          }}
+        />
       )}
     </div>
   );

@@ -99,6 +99,29 @@ class CommunicationService:
             except Exception as e:
                 logger.error(f"[Communication -> Twilio] Dispatch error: {e}")
 
+        # 3. Clinical Email Reminder Dispatch
+        email_result = None
+        recipient_email = getattr(patient, "email", None)
+        if recipient_email:
+            try:
+                from app.services.email_service import EmailService
+                stage = followup.cycle.stage if (followup.cycle and followup.cycle.stage) else "clinical_care"
+                due_str = followup.due_date.strftime("%d-%b-%Y %I:%M %p") if followup.due_date else "Today"
+                tam_msg = followup.ai_metadata.get("tam_message", msg) if followup.ai_metadata else msg
+                eng_msg = followup.ai_metadata.get("eng_message", msg) if followup.ai_metadata else msg
+                email_result = EmailService.send_clinical_reminder(
+                    to_email=recipient_email,
+                    patient_name=patient.name,
+                    stage=stage,
+                    due_date=due_str,
+                    tamil_message=tam_msg,
+                    english_message=eng_msg,
+                    priority_score=followup.priority_score,
+                )
+                logger.info(f"[Communication -> Email] Clinical reminder sent to {recipient_email}: {email_result.get('status')}")
+            except Exception as e:
+                logger.error(f"[Communication -> Email] Error dispatching email to {recipient_email}: {e}")
+
         # Record Audit Event
         AuditService.log_event(
             db=db,
@@ -116,6 +139,8 @@ class CommunicationService:
                 "n8n_dispatched": n8n_dispatched,
                 "twilio_sid": twilio_sid,
                 "twilio_status": twilio_status,
+                "email_dispatched": bool(email_result and email_result.get("success")),
+                "email_status": email_result.get("status") if email_result else None,
             },
         )
 
@@ -126,12 +151,13 @@ class CommunicationService:
             "phone": patient.phone,
             "channel": channel,
             "content": msg,
-            "status": "DELIVERED" if (twilio_sid or n8n_dispatched) else "SIMULATED",
+            "status": "DELIVERED" if (twilio_sid or n8n_dispatched or (email_result and email_result.get("status") == "DELIVERED")) else "SIMULATED",
             "delivered_at": delivery_timestamp,
             "n8n_dispatched": n8n_dispatched,
             "n8n_status": n8n_response_status,
             "twilio_sid": twilio_sid,
             "twilio_status": twilio_status,
+            "email_result": email_result,
         }
 
     @classmethod

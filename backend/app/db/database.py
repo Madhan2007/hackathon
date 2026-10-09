@@ -53,3 +53,12 @@ def init_db() -> None:
     import app.models.user  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+
+    # Auto-migrate new columns for PostgreSQL / SQLite
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE patients ADD COLUMN IF NOT EXISTS email VARCHAR(255);"))
+    except Exception as e:
+        # SQLite or already existing
+        pass
