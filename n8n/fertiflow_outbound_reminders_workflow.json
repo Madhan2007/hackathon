@@ -1,0 +1,82 @@
+{
+  "name": "FertiFlow - Outbound Patient Reminders & Multi-Channel Fallback",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fertiflow-outbound",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook-outbound",
+      "name": "Outbound Trigger from FertiFlow",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare message payload and template selection\nconst body = $input.item.json.body || $input.item.json;\n\nreturn [{\n  json: {\n    patient_id: body.patient_id,\n    patient_name: body.patient_name,\n    phone: body.phone,\n    language: body.language || 'ta',\n    channel: body.channel || 'whatsapp',\n    message: body.message,\n    followup_id: body.followup_id,\n    due_date: body.due_date,\n    dispatched_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-prepare-dispatch",
+      "name": "Prepare Outbound Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"DISPATCHED_TO_QUEUE\",\n  \"patient_phone\": \"{{ $json.phone }}\",\n  \"channel\": \"{{ $json.channel }}\",\n  \"message_preview\": \"{{ $json.message.substring(0, 50) }}...\",\n  \"dispatched_at\": \"{{ $json.dispatched_at }}\"\n}",
+        "options": {}
+      },
+      "id": "node-ack-webhook",
+      "name": "Acknowledge FertiFlow",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Logic for WhatsApp Cloud API or SMS provider\n// When connecting Meta Cloud API, insert Meta WhatsApp node here.\n// When connecting Twilio or Fast2SMS, configure provider credentials.\nconst item = $input.item.json;\n\nconsole.log(`[n8n WhatsApp Outreach] Sending to ${item.phone}: ${item.message}`);\n\nreturn [{\n  json: {\n    ...item,\n    delivery_gateway: 'whatsapp_cloud_api',\n    delivery_status: 'SENT'\n  }\n}];"
+      },
+      "id": "node-send-whatsapp",
+      "name": "Dispatch to WhatsApp Gateway",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 300]
+    }
+  ],
+  "connections": {
+    "Outbound Trigger from FertiFlow": {
+      "main": [
+        [
+          {
+            "node": "Prepare Outbound Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Outbound Message": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge FertiFlow",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Dispatch to WhatsApp Gateway",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

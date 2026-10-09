@@ -1,0 +1,162 @@
+{
+  "name": "FertiFlow - Inbound WhatsApp & Gemini NLU Router",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fertiflow-inbound-wa",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook-inbound",
+      "name": "Inbound WhatsApp Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalizes both Meta WhatsApp Cloud API payload and direct JSON testing\nconst body = $input.item.json.body || $input.item.json;\nlet phone = \"\";\nlet message = \"\";\nlet attachmentType = null;\nlet attachmentData = null;\n\n// 1. Check if Meta WhatsApp Cloud API format\nif (body.entry && body.entry[0]?.changes && body.entry[0].changes[0]?.value?.messages) {\n  const waMsg = body.entry[0].changes[0].value.messages[0];\n  phone = waMsg.from;\n  if (waMsg.type === 'text') {\n    message = waMsg.text.body;\n  } else if (waMsg.type === 'image') {\n    message = waMsg.image.caption || 'Image report received';\n    attachmentType = 'image';\n    attachmentData = waMsg.image.id;\n  } else if (waMsg.type === 'document') {\n    message = waMsg.document.caption || 'Document report received';\n    attachmentType = 'document';\n    attachmentData = waMsg.document.id;\n  }\n} else {\n  // 2. Direct JSON payload (e.g. from simulator or test script)\n  phone = body.phone || body.from || \"+919876543210\";\n  message = body.message || body.text || \"\";\n  attachmentType = body.attachment_type || null;\n  attachmentData = body.attachment_data || null;\n}\n\n// Format phone with + if missing\nif (phone && !phone.startsWith('+')) {\n  phone = '+' + phone;\n}\n\nreturn [{\n  json: {\n    phone,\n    message,\n    channel: 'whatsapp',\n    attachment_type: attachmentType,\n    attachment_data: attachmentData,\n    raw_incoming: body\n  }\n}];"
+      },
+      "id": "node-parse-payload",
+      "name": "Parse WhatsApp Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/v1/webhooks/whatsapp",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $json.phone }}\",\n  \"message\": \"{{ $json.message }}\",\n  \"channel\": \"{{ $json.channel }}\",\n  \"attachment_type\": {{ $json.attachment_type ? '\"' + $json.attachment_type + '\"' : 'null' }},\n  \"attachment_data\": {{ $json.attachment_data ? '\"' + $json.attachment_data + '\"' : 'null' }}\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "node-fertiflow-api",
+      "name": "FertiFlow Clinical Engine & Gemini NLU",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-medical-alert",
+              "leftValue": "={{ $json.workflow_action }}",
+              "rightValue": "MEDICAL_ESCALATION_TRIGGERED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "node-check-escalation",
+      "name": "Is Medical Escalation?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Trigger alert to clinic emergency duty group / doctor\nconst data = $input.item.json;\nconst alertMsg = `🚨 *URGENT MEDICAL ALERT*\\n\\n` +\n  `*Patient:* ${data.patient?.name} (${data.patient?.district})\\n` +\n  `*Phone:* ${data.patient?.phone || 'N/A'}\\n` +\n  `*Reason:* ${data.intent_analysis?.patient_reason || 'Urgent symptom reported'}\\n` +\n  `*Confidence:* ${(data.intent_analysis?.confidence * 100).toFixed(0)}%\\n` +\n  `*Follow-up Status:* ${data.new_status}\\n\\n` +\n  `*Immediate Action Required by On-Duty Doctor/Nurse!*`;\n\nreturn [{\n  json: {\n    alert_type: 'DOCTOR_ALERT',\n    alert_message: alertMsg,\n    patient: data.patient,\n    reply_message: data.reply_message\n  }\n}];"
+      },
+      "id": "node-format-doctor-alert",
+      "name": "Format Doctor Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"patient_name\": \"{{ $('FertiFlow Clinical Engine & Gemini NLU').item.json.patient.name }}\",\n  \"intent\": \"{{ $('FertiFlow Clinical Engine & Gemini NLU').item.json.intent_analysis.intent }}\",\n  \"workflow_action\": \"{{ $('FertiFlow Clinical Engine & Gemini NLU').item.json.workflow_action }}\",\n  \"reply_message\": {{ JSON.stringify($('FertiFlow Clinical Engine & Gemini NLU').item.json.reply_message) }}\n}",
+        "options": {}
+      },
+      "id": "node-send-reply",
+      "name": "Respond to WhatsApp / Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1360, 300]
+    }
+  ],
+  "connections": {
+    "Inbound WhatsApp Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse WhatsApp Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse WhatsApp Payload": {
+      "main": [
+        [
+          {
+            "node": "FertiFlow Clinical Engine & Gemini NLU",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FertiFlow Clinical Engine & Gemini NLU": {
+      "main": [
+        [
+          {
+            "node": "Is Medical Escalation?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Medical Escalation?": {
+      "main": [
+        [
+          {
+            "node": "Format Doctor Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to WhatsApp / Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Doctor Alert": {
+      "main": [
+        [
+          {
+            "node": "Respond to WhatsApp / Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

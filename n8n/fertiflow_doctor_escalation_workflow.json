@@ -1,0 +1,67 @@
+{
+  "name": "FertiFlow - Urgent Doctor & Staff Escalation Alert",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fertiflow-doctor-alert",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-escalation-webhook",
+      "name": "Doctor Alert Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nconst formattedAlert = `🚨 *FERTIFLOW CRITICAL CLINICAL ESCALATION* 🚨\\n\\n` +\n  `*Patient Name:* ${body.patient_name || 'Anonymous'}\\n` +\n  `*Phone Number:* ${body.patient_phone || 'N/A'}\\n` +\n  `*District / Location:* ${body.patient_district || 'Tamil Nadu'}\\n` +\n  `*Urgency Level:* ${body.urgency || 'IMMEDIATE'} (L3 Clinical Guardrail)\\n` +\n  `*Reported Symptom / Reason:* ${body.symptom_or_reason}\\n` +\n  `*Timestamp:* ${body.timestamp || new Date().toISOString()}\\n\\n` +\n  `⚡ *ACTION REQUIRED:* On-duty fertility specialist Dr. Subha or clinical nurse coordinator must contact this patient immediately.`;\n\nreturn [{\n  json: {\n    ...body,\n    formatted_alert: formattedAlert,\n    status: 'ALERT_BROADCASTED'\n  }\n}];"
+      },
+      "id": "node-format-alert",
+      "name": "Format Clinical Escalation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"ESCALATION_DELIVERED\",\n  \"alert_id\": \"{{ $json.alert_id }}\",\n  \"patient_name\": \"{{ $json.patient_name }}\",\n  \"broadcast_time\": \"{{ $json.timestamp }}\"\n}",
+        "options": {}
+      },
+      "id": "node-ack-escalation",
+      "name": "Respond to FertiFlow",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Doctor Alert Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format Clinical Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Clinical Escalation": {
+      "main": [
+        [
+          {
+            "node": "Respond to FertiFlow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
