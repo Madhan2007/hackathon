@@ -51,12 +51,13 @@ export default function QueuePage() {
 
   const handleUpdateStatus = async (id, newStatus) => {
     try {
-      await followupsApi.update(id, { status: newStatus });
+      const updated = await followupsApi.update(id, { status: newStatus });
       setFollowups((prev) =>
-        prev.map((f) => (f.id === id ? { ...f, status: newStatus } : f))
+        prev.map((f) => (f.id === id ? { ...f, ...updated, status: newStatus } : f))
       );
     } catch (err) {
-      alert('Error updating follow-up status');
+      const detail = err.response?.data?.detail || err.message || 'Error updating follow-up status';
+      alert(`Follow-up update failed: ${detail}`);
     }
   };
 

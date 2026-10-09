@@ -16,9 +16,24 @@ class FollowupStateMachine:
     """
 
     VALID_TRANSITIONS = {
-        FollowupStatus.PENDING: [FollowupStatus.SCHEDULED, FollowupStatus.RESCHEDULE_REQUESTED, FollowupStatus.ESCALATED, FollowupStatus.CANCELLED],
-        FollowupStatus.SCHEDULED: [FollowupStatus.SENT, FollowupStatus.RESCHEDULE_REQUESTED, FollowupStatus.RESCHEDULED, FollowupStatus.ESCALATED, FollowupStatus.CANCELLED, FollowupStatus.COMPLETED],
+        FollowupStatus.PENDING: [
+            FollowupStatus.SCHEDULED,
+            FollowupStatus.SENT,
+            FollowupStatus.COMPLETED,
+            FollowupStatus.RESCHEDULE_REQUESTED,
+            FollowupStatus.ESCALATED,
+            FollowupStatus.CANCELLED,
+        ],
+        FollowupStatus.SCHEDULED: [
+            FollowupStatus.SENT,
+            FollowupStatus.COMPLETED,
+            FollowupStatus.RESCHEDULE_REQUESTED,
+            FollowupStatus.RESCHEDULED,
+            FollowupStatus.ESCALATED,
+            FollowupStatus.CANCELLED,
+        ],
         FollowupStatus.SENT: [
+            FollowupStatus.SENT,
             FollowupStatus.COMPLETED,
             FollowupStatus.RESCHEDULE_REQUESTED,
             FollowupStatus.ESCALATED,
@@ -27,11 +42,12 @@ class FollowupStateMachine:
         ],
         FollowupStatus.RETRY: [
             FollowupStatus.SENT,
+            FollowupStatus.COMPLETED,
             FollowupStatus.ESCALATED,
             FollowupStatus.CANCELLED,
-            FollowupStatus.COMPLETED,
         ],
         FollowupStatus.RESCHEDULE_REQUESTED: [
+            FollowupStatus.SENT,
             FollowupStatus.SLOT_OFFERED,
             FollowupStatus.RESCHEDULED,
             FollowupStatus.ESCALATED,
@@ -39,35 +55,42 @@ class FollowupStateMachine:
             FollowupStatus.COMPLETED,
         ],
         FollowupStatus.SLOT_OFFERED: [
+            FollowupStatus.SENT,
             FollowupStatus.RESCHEDULED,
             FollowupStatus.ESCALATED,
             FollowupStatus.CANCELLED,
             FollowupStatus.COMPLETED,
         ],
         FollowupStatus.RESCHEDULED: [
+            FollowupStatus.SENT,
             FollowupStatus.PENDING,
             FollowupStatus.SCHEDULED,
             FollowupStatus.COMPLETED,
         ],
         FollowupStatus.ESCALATED: [
+            FollowupStatus.SENT,
             FollowupStatus.COMPLETED,
             FollowupStatus.MISSED,
             FollowupStatus.CANCELLED,
             FollowupStatus.SCHEDULED,
         ],
         FollowupStatus.COMPLETED: [
+            FollowupStatus.SENT,
             FollowupStatus.RESCHEDULE_REQUESTED,
             FollowupStatus.SCHEDULED,
             FollowupStatus.PENDING,
             FollowupStatus.ESCALATED,
         ],
         FollowupStatus.MISSED: [
+            FollowupStatus.SENT,
             FollowupStatus.RESCHEDULE_REQUESTED,
             FollowupStatus.SCHEDULED,
             FollowupStatus.PENDING,
             FollowupStatus.ESCALATED,
+            FollowupStatus.COMPLETED,
         ],
         FollowupStatus.CANCELLED: [
+            FollowupStatus.SENT,
             FollowupStatus.PENDING,
             FollowupStatus.SCHEDULED,
         ],
@@ -88,8 +111,19 @@ class FollowupStateMachine:
         """
         current_status = followup.status
 
-        # Allow no-op if same status
+        # If already same status and sending, still allow dispatch
         if current_status == new_status:
+            if new_status == FollowupStatus.SENT and followup.patient:
+                try:
+                    from app.services.communication import CommunicationService
+                    CommunicationService.dispatch_outreach(
+                        db=db,
+                        patient=followup.patient,
+                        followup=followup,
+                    )
+                except Exception as e:
+                    import logging
+                    logging.getLogger("fertiflow.followup").warning(f"Failed to dispatch outreach: {e}")
             return followup
 
         valid_targets = cls.VALID_TRANSITIONS.get(current_status, [])
@@ -143,4 +177,18 @@ class FollowupStateMachine:
 
         db.commit()
         db.refresh(followup)
+
+        # Dispatch outbound communication when marked SENT
+        if new_status == FollowupStatus.SENT and followup.patient:
+            try:
+                from app.services.communication import CommunicationService
+                CommunicationService.dispatch_outreach(
+                    db=db,
+                    patient=followup.patient,
+                    followup=followup,
+                )
+            except Exception as e:
+                import logging
+                logging.getLogger("fertiflow.followup").warning(f"Failed to dispatch outreach on transition: {e}")
+
         return followup
