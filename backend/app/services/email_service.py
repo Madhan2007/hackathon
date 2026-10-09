@@ -125,7 +125,8 @@ class EmailService:
             try:
                 msg = MIMEMultipart("alternative")
                 msg["Subject"] = subject
-                msg["From"] = settings.SMTP_FROM_EMAIL or settings.SMTP_USER
+                from_display = f"FertiFlow AI Clinic <{settings.SMTP_USER}>"
+                msg["From"] = from_display
                 msg["To"] = to_email
 
                 # Plain text version as fallback
@@ -133,17 +134,20 @@ class EmailService:
                 msg.attach(MIMEText(text_content, "plain"))
                 msg.attach(MIMEText(html_content, "html"))
 
+                # Google App passwords have 16 letters, strip any spaces
+                smtp_password = settings.SMTP_PASSWORD.replace(" ", "")
+
                 # Connect via SSL or TLS
                 if settings.SMTP_PORT == 465:
                     with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
-                        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-                        server.sendmail(msg["From"], [to_email], msg.as_string())
+                        server.login(settings.SMTP_USER, smtp_password)
+                        server.sendmail(settings.SMTP_USER, [to_email], msg.as_string())
                 else:
                     with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
                         server.ehlo()
                         server.starttls()
-                        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-                        server.sendmail(msg["From"], [to_email], msg.as_string())
+                        server.login(settings.SMTP_USER, smtp_password)
+                        server.sendmail(settings.SMTP_USER, [to_email], msg.as_string())
 
                 logger.info(f"[EmailService] Real email successfully delivered to {to_email}")
                 return {

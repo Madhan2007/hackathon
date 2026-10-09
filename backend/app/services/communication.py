@@ -101,7 +101,7 @@ class CommunicationService:
 
         # 3. Clinical Email Reminder Dispatch
         email_result = None
-        recipient_email = getattr(patient, "email", None)
+        recipient_email = getattr(patient, "email", None) or settings.SMTP_USER
         if recipient_email:
             try:
                 from app.services.email_service import EmailService
