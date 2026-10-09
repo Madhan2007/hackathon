@@ -68,7 +68,36 @@ class CommunicationService:
                 n8n_response_status = res.status_code
                 logger.info(f"[Communication -> n8n] Dispatched to n8n webhook (status={res.status_code})")
             except Exception as e:
-                logger.warning(f"[Communication -> n8n] Webhook post failed ({e}). Falling back to simulation.")
+                logger.warning(f"[Communication -> n8n] Webhook post failed ({e}).")
+
+        # 2. Live Twilio WhatsApp Gateway Delivery
+        twilio_sid = None
+        twilio_status = None
+        if settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN:
+            try:
+                dest_phone = patient.phone.strip()
+                if not dest_phone.startswith("whatsapp:"):
+                    dest_phone = f"whatsapp:{dest_phone}"
+                twilio_url = f"https://api.twilio.com/2010-04-01/Accounts/{settings.TWILIO_ACCOUNT_SID}/Messages.json"
+                tw_res = requests.post(
+                    twilio_url,
+                    auth=(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN),
+                    data={
+                        "From": settings.TWILIO_WHATSAPP_FROM,
+                        "To": dest_phone,
+                        "Body": msg,
+                    },
+                    timeout=10.0,
+                )
+                if tw_res.ok:
+                    tw_data = tw_res.json()
+                    twilio_sid = tw_data.get("sid")
+                    twilio_status = tw_data.get("status")
+                    logger.info(f"[Communication -> Twilio] WhatsApp queued to {dest_phone} (SID={twilio_sid})")
+                else:
+                    logger.error(f"[Communication -> Twilio] Twilio HTTP {tw_res.status_code}: {tw_res.text}")
+            except Exception as e:
+                logger.error(f"[Communication -> Twilio] Dispatch error: {e}")
 
         # Record Audit Event
         AuditService.log_event(
@@ -85,6 +114,8 @@ class CommunicationService:
                 "message": msg,
                 "timestamp": delivery_timestamp,
                 "n8n_dispatched": n8n_dispatched,
+                "twilio_sid": twilio_sid,
+                "twilio_status": twilio_status,
             },
         )
 
@@ -95,10 +126,12 @@ class CommunicationService:
             "phone": patient.phone,
             "channel": channel,
             "content": msg,
-            "status": "DELIVERED",
+            "status": "DELIVERED" if (twilio_sid or n8n_dispatched) else "SIMULATED",
             "delivered_at": delivery_timestamp,
             "n8n_dispatched": n8n_dispatched,
             "n8n_status": n8n_response_status,
+            "twilio_sid": twilio_sid,
+            "twilio_status": twilio_status,
         }
 
     @classmethod

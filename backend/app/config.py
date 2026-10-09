@@ -42,6 +42,20 @@ class Settings(BaseSettings):
         description="Timeout in seconds when firing webhooks to n8n"
     )
 
+    # Twilio WhatsApp Integration Settings
+    TWILIO_ACCOUNT_SID: str = Field(
+        default="",
+        description="Twilio Account SID (e.g. ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx)"
+    )
+    TWILIO_AUTH_TOKEN: str = Field(
+        default="",
+        description="Twilio Auth Token"
+    )
+    TWILIO_WHATSAPP_FROM: str = Field(
+        default="whatsapp:+14155238886",
+        description="Twilio WhatsApp sender (default is Twilio Sandbox: whatsapp:+14155238886)"
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
